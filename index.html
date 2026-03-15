@@ -27,21 +27,7 @@
                 בחירת מניות <span class="text-emerald-500 italic">חכמה</span>
             </h1>
             <p class="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed animate-fade-in">
-                ניתוח שוק בזמן אמת המבוסס על בינה מלאכותית, מותאם אישית לאסטרטגיית ההשקעה שלך.
-            </p>
-        </header>
-
-        <!-- API Key Input (Hidden after entry) -->
-        <div id="apiKeySection" class="mb-8 p-6 bg-slate-900/50 border border-white/10 rounded-3xl animate-fade-in">
-            <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">הזן מפתח Gemini API כדי להתחיל</label>
-            <div class="flex gap-3">
-                <input type="password" id="apiKeyInput" placeholder="Paste your API key here..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors">
-                <button onclick="saveApiKey()" class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-3 rounded-xl transition-all">שמור</button>
-            </div>
-            <p class="text-[10px] text-slate-500 mt-2">המפתח נשמר רק בדפדפן שלך ולא נשלח לשום שרת חיצוני פרט ל-Google.</p>
-        </div>
-
-        <!-- Search Section -->
+                ניתוח שוק בזמן אמת המבוסס על בינה מלאכותית, מותא        <!-- Search Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12 animate-fade-in">
             <div class="bg-slate-900/50 border border-white/10 p-6 rounded-3xl">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">סכום השקעה (₪)</label>
@@ -99,16 +85,19 @@
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
+        // === הדבק את המפתח שלך כאן ===
+        const GEMINI_API_KEY = "YOUR_API_KEY_HERE";
+        // ============================
+
         // Initialize Lucide
         lucide.createIcons();
 
-        // API Key Management
-        window.saveApiKey = () => {
-            const key = document.getElementById('apiKeyInput').value;
-            if (key) {
-                localStorage.setItem('gemini_api_key', key);
-                document.getElementById('apiKeySection').classList.add('hidden');
-                alert('המפתח נשמר בהצלחה!');
+        window.handleSearch = async () => {
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY_HERE") {
+                alert('שגיאה: לא הוגדר מפתח API בתוך הקוד.');
+                return;
+            }
+�תח נשמר בהצלחה!');
             }
         };
 
