@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Stock Picker | בחירת מניות חכמה</title>
-    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -34,17 +31,17 @@
             </p>
         </header>
 
-        <!-- API Key Section -->
+        <!-- API Key Input (Hidden after entry) -->
         <div id="apiKeySection" class="mb-8 p-6 bg-slate-900/50 border border-white/10 rounded-3xl animate-fade-in">
             <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">הזן מפתח Gemini API כדי להתחיל</label>
             <div class="flex gap-3">
-                <input type="password" id="apiKeyInput" placeholder="הדבק את המפתח כאן..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors text-left" dir="ltr">
+                <input type="password" id="apiKeyInput" placeholder="Paste your API key here..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors">
                 <button onclick="saveApiKey()" class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-3 rounded-xl transition-all">שמור</button>
             </div>
-            <p class="text-[10px] text-slate-500 mt-2">המפתח נשמר בדפדפן שלך בלבד (LocalStorage).</p>
+            <p class="text-[10px] text-slate-500 mt-2">המפתח נשמר רק בדפדפן שלך ולא נשלח לשום שרת חיצוני פרט ל-Google.</p>
         </div>
 
-        <!-- Controls -->
+        <!-- Search Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12 animate-fade-in">
             <div class="bg-slate-900/50 border border-white/10 p-6 rounded-3xl">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">סכום השקעה (₪)</label>
@@ -63,35 +60,36 @@
                 <div class="flex items-center gap-2">
                     <input type="number" id="horizonValue" value="1" class="w-12 bg-transparent text-xl font-bold text-white focus:outline-none">
                     <select id="horizonUnit" class="bg-transparent text-xl font-bold text-white focus:outline-none cursor-pointer">
-                        <option value="שנים" class="bg-slate-900">שנים</option>
-                        <option value="חודשים" class="bg-slate-900">חודשים</option>
+                        <option value="Years" class="bg-slate-900">שנים</option>
+                        <option value="Months" class="bg-slate-900">חודשים</option>
+                        <option value="Days" class="bg-slate-900">ימים</option>
                     </select>
                 </div>
             </div>
         </div>
 
         <button onclick="handleSearch()" id="searchBtn" class="w-full py-6 bg-white text-black font-black text-xl rounded-3xl hover:bg-emerald-400 transition-all mb-16 flex items-center justify-center gap-3 group">
-            <span>מצא הזדמנויות השקעה</span>
+            <span>נתח שוק ומצא הזדמנויות</span>
             <i data-lucide="arrow-left" class="w-6 h-6 group-hover:-translate-x-2 transition-transform"></i>
         </button>
 
-        <!-- Loading State -->
+        <!-- Results -->
         <div id="loading" class="hidden text-center py-20">
             <div class="inline-block w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
-            <p class="text-slate-400 animate-pulse">הבינה המלאכותית מנתחת את השוק...</p>
+            <p class="text-slate-400 animate-pulse">ה-AI סורק את השוק כעת...</p>
         </div>
 
-        <!-- Results Container -->
         <div id="results" class="space-y-6"></div>
 
-        <!-- Footer -->
+        <!-- Footer Disclaimer -->
         <footer class="mt-20 pt-8 border-t border-white/5">
             <div class="bg-amber-500/5 border border-amber-500/10 p-6 rounded-3xl flex gap-4">
                 <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-500 shrink-0"></i>
                 <div>
-                    <h4 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">אזהרה חשובה</h4>
+                    <h4 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-2">אזהרת סיכון ושקיפות</h4>
                     <p class="text-xs leading-relaxed text-slate-500">
-                        המידע מופק על ידי בינה מלאכותית ואינו מהווה ייעוץ השקעות מקצועי. השקעה בשוק ההון כרוכה בסיכון.
+                        הנתונים מופקים באמצעות בינה מלאכותית וסריקת רשת. אין לראות במידע זה ייעוץ השקעות. 
+                        השקעה בשוק ההון כרוכה בסיכון להפסד כספי. תשואות העבר אינן מבטיחות ביצועים עתידיים.
                     </p>
                 </div>
             </div>
@@ -99,19 +97,18 @@
     </div>
 
     <script type="module">
-        // Import Gemini SDK from ESM
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-        // Initialize Icons
+        // Initialize Lucide
         lucide.createIcons();
 
-        // API Key Logic
+        // API Key Management
         window.saveApiKey = () => {
             const key = document.getElementById('apiKeyInput').value;
             if (key) {
                 localStorage.setItem('gemini_api_key', key);
                 document.getElementById('apiKeySection').classList.add('hidden');
-                alert('המפתח נשמר!');
+                alert('המפתח נשמר בהצלחה!');
             }
         };
 
@@ -122,7 +119,7 @@
         window.handleSearch = async () => {
             const apiKey = localStorage.getItem('gemini_api_key');
             if (!apiKey) {
-                alert('אנא הזן מפתח API');
+                alert('אנא הזן מפתח API תחילה');
                 return;
             }
 
@@ -136,6 +133,7 @@
             const resultsDiv = document.getElementById('results');
 
             btn.disabled = true;
+            btn.style.opacity = '0.5';
             loading.classList.remove('hidden');
             resultsDiv.innerHTML = '';
 
@@ -143,56 +141,61 @@
                 const genAI = new GoogleGenerativeAI(apiKey);
                 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-                const prompt = `נתח את שוק ההון והצע 3 מניות מומלצות להשקעה של ${amount} ש"ח, בסיכון ${risk} לטווח של ${hValue} ${hUnit}.
-                החזר JSON בלבד (ללא סימני markdown) כמערך אובייקטים עם השדות: symbol, name, sector, currentPrice, change, whyBest, estimatedReturn.`;
+                const prompt = `נתח את שוק ההון היום והצע 3 מניות מומלצות להשקעה של ${amount} ש"ח, ברמת סיכון ${risk} ולאופק של ${hValue} ${hUnit}.
+                החזר את התשובה בפורמט JSON בלבד, כמערך של אובייקטים עם השדות הבאים בעברית:
+                symbol, name, sector, currentPrice, change, riskExplanation, whyBest, estimatedReturn (טווח ריאלי ושמרני), timeHorizonAnalysis.`;
 
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
-                let text = response.text();
+                const text = response.text();
                 
-                // Clean potential markdown
-                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                
-                const stocks = JSON.parse(text);
+                // Clean JSON from markdown if needed
+                const cleanJson = text.replace(/```json|```/g, '');
+                const stocks = JSON.parse(cleanJson);
 
                 stocks.forEach(stock => {
                     const card = document.createElement('div');
                     card.className = 'bg-slate-900/50 border border-white/10 p-8 rounded-[2rem] animate-fade-in';
                     card.innerHTML = `
-                        <div class="flex flex-col md:flex-row justify-between gap-6 mb-6">
-                            <div class="flex items-center gap-4">
-                                <div class="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center font-black text-lg">
+                        <div class="flex flex-col md:flex-row justify-between gap-6 mb-8">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 bg-white text-black rounded-2xl flex items-center justify-center font-black text-xl">
                                     ${stock.symbol}
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold text-white">${stock.name}</h3>
-                                    <p class="text-slate-500 text-xs">${stock.sector}</p>
+                                    <h3 class="text-2xl font-bold text-white">${stock.name}</h3>
+                                    <p class="text-slate-500 text-sm">${stock.sector}</p>
                                 </div>
                             </div>
                             <div class="text-left md:text-right">
-                                <div class="text-2xl font-mono font-bold text-white">${stock.currentPrice}</div>
-                                <div class="text-emerald-500 text-sm font-bold">${stock.change}</div>
+                                <div class="text-3xl font-mono font-bold text-white">${stock.currentPrice}</div>
+                                <div class="text-emerald-500 font-bold">${stock.change}</div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-white/5">
-                            <div class="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
-                                <p class="text-[10px] font-bold text-emerald-500 uppercase mb-1">למה זו בחירה טובה</p>
-                                <p class="text-xs opacity-80">${stock.whyBest}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-white/5">
+                            <div class="space-y-2">
+                                <h4 class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">ניתוח סיכון</h4>
+                                <p class="text-xs leading-relaxed opacity-70">${stock.riskExplanation}</p>
                             </div>
-                            <div class="bg-blue-500/5 p-4 rounded-2xl border border-blue-500/10">
-                                <p class="text-[10px] font-bold text-blue-400 uppercase mb-1">תשואה משוערת</p>
+                            <div class="space-y-2 bg-blue-500/5 p-4 rounded-2xl border border-blue-500/10">
+                                <h4 class="text-[10px] uppercase tracking-widest text-blue-400 font-bold">תשואה משוערת</h4>
                                 <p class="text-lg font-mono font-bold text-blue-400">${stock.estimatedReturn}</p>
+                            </div>
+                            <div class="space-y-2 bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
+                                <h4 class="text-[10px] uppercase tracking-widest text-emerald-500 font-bold">למה זו הבחירה הטובה ביותר</h4>
+                                <p class="text-xs leading-relaxed font-medium">${stock.whyBest}</p>
                             </div>
                         </div>
                     `;
                     resultsDiv.appendChild(card);
                 });
 
-            } catch (e) {
-                console.error(e);
-                alert('שגיאה בחיבור ל-API. ודא שהמפתח תקין.');
+            } catch (error) {
+                console.error(error);
+                alert('שגיאה בניתוח הנתונים. ודא שמפתח ה-API תקין.');
             } finally {
                 btn.disabled = false;
+                btn.style.opacity = '1';
                 loading.classList.add('hidden');
             }
         };
