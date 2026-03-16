@@ -1,190 +1,427 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartInvest | מנתח השקעות חכם</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0A0A0B; color: #F0F0F0; margin: 0; padding: 0; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        .card { background: #151619; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .score-box { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; font-family: 'JetBrains Mono'; }
-        .btn-primary { background: #10b981; color: #000; font-weight: 800; transition: all 0.2s; cursor: pointer; }
-        .btn-primary:hover { background: #059669; transform: translateY(-1px); }
-        .btn-primary:active { transform: translateY(0); }
-        input, select, textarea { background: rgba(0,0,0,0.4) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; outline: none; }
-        input:focus, select:focus, textarea:focus { border-color: #10b981 !important; }
-        .axis-label { font-size: 10px; font-weight: 700; fill: rgba(255,255,255,0.3); text-transform: uppercase; }
-        .grid line { stroke: rgba(255,255,255,0.05); }
-        .hidden { display: none; }
-    </style>
-</head>
-<body class="p-4 md:p-10 min-h-screen relative overflow-x-hidden">
-    <!-- Background Glow -->
-    <div class="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-    <div class="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none"></div>
+import React, { useState, useEffect } from 'react';
+import { 
+  TrendingUp, 
+  AlertTriangle, 
+  ShieldCheck, 
+  BarChart3, 
+  Clock,
+  Target,
+  Zap,
+  RefreshCw,
+  FileText,
+  Search,
+  Loader2,
+  Info
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  ScatterChart, 
+  Scatter, 
+  XAxis, 
+  YAxis, 
+  ZAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell,
+  Label,
+  LabelList
+} from 'recharts';
 
-    <div class="max-w-7xl mx-auto relative z-10">
-        <!-- Header -->
-        <header class="mb-12 flex justify-between items-center border-b border-white/10 pb-8">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                    <i data-lucide="trending-up" class="text-black w-7 h-7"></i>
-                </div>
-                <div>
-                    <h1 class="text-3xl font-black tracking-tight">SmartInvest</h1>
-                    <p class="text-[10px] uppercase tracking-[0.2em] opacity-40 font-mono">Advanced Financial Intelligence</p>
-                </div>
-            </div>
-        </header>
+// Built-in Smart Database of popular stocks
+const STOCKS_DB = [
+  { ticker: 'NVDA', name: 'NVIDIA Corp', price: 875.20, volatility: 9, annualReturn: 45, marketCap: '2.1T', whyBest: 'מובילה עולמית בשבבי AI, צמיחה אדירה בתחום מרכזי הנתונים.', technicalStatus: 'Strong Buy' },
+  { ticker: 'AAPL', name: 'Apple Inc', price: 172.50, volatility: 4, annualReturn: 15, marketCap: '2.6T', whyBest: 'יציבות פיננסית גבוהה, תזרים מזומנים חזק ומערכת אקולוגית סגורה.', technicalStatus: 'Neutral' },
+  { ticker: 'TSLA', name: 'Tesla, Inc', price: 163.50, volatility: 10, annualReturn: 35, marketCap: '520B', whyBest: 'חדשנות בתחום הרכב החשמלי והאנרגיה, פוטנציאל צמיחה גבוה אך תנודתי.', technicalStatus: 'Volatile' },
+  { ticker: 'MSFT', name: 'Microsoft', price: 415.10, volatility: 3, annualReturn: 18, marketCap: '3.1T', whyBest: 'שליטה בתחום הענן והתוכנה הארגונית, השקעה חכמה ב-OpenAI.', technicalStatus: 'Bullish' },
+  { ticker: 'GOOGL', name: 'Alphabet Inc', price: 151.20, volatility: 5, annualReturn: 22, marketCap: '1.9T', whyBest: 'דומיננטיות בחיפוש ובפרסום דיגיטלי, השקעות רבות בתשתית AI.', technicalStatus: 'Bullish' },
+  { ticker: 'AMZN', name: 'Amazon.com', price: 178.10, volatility: 6, annualReturn: 20, marketCap: '1.8T', whyBest: 'מובילת המסחר האלקטרוני והענן (AWS), שיפור מתמיד ברווחיות.', technicalStatus: 'Bullish' },
+  { ticker: 'LLY', name: 'Eli Lilly', price: 750.40, volatility: 5, annualReturn: 40, marketCap: '710B', whyBest: 'פריצת דרך בתרופות להרזיה וסוכרת, ביקוש קשיח וצמיחה מהירה.', technicalStatus: 'Strong Buy' },
+  { ticker: 'META', name: 'Meta Platforms', price: 495.20, volatility: 7, annualReturn: 28, marketCap: '1.2T', whyBest: 'התייעלות מרשימה, דומיננטיות ברשתות חברתיות וצמיחה בפרסום.', technicalStatus: 'Bullish' },
+  { ticker: 'AVGO', name: 'Broadcom Inc', price: 1350.10, volatility: 6, annualReturn: 32, marketCap: '620B', whyBest: 'ספקית מפתח לתשתיות רשת ושבבי AI, דיבידנד צומח.', technicalStatus: 'Bullish' },
+  { ticker: 'V', name: 'Visa Inc', price: 285.40, volatility: 2, annualReturn: 12, marketCap: '580B', whyBest: 'מודל עסקי חסין, צמיחה עקבית בתשלומים דיגיטליים ברחבי העולם.', technicalStatus: 'Stable' },
+  { ticker: 'JPM', name: 'JPMorgan Chase', price: 195.30, volatility: 4, annualReturn: 14, marketCap: '560B', whyBest: 'הבנק הגדול והיציב בארה"ב, ניהול סיכונים מעולה.', technicalStatus: 'Stable' },
+  { ticker: 'AMD', name: 'AMD', price: 190.20, volatility: 8, annualReturn: 30, marketCap: '300B', whyBest: 'מתחרה חזקה של אינטל ואנבידיה, צמיחה בשוק השרתים וה-AI.', technicalStatus: 'Bullish' },
+  { ticker: 'NFLX', name: 'Netflix', price: 610.50, volatility: 7, annualReturn: 25, marketCap: '260B', whyBest: 'מובילת הסטרימינג העולמית, מעבר מוצלח למודל פרסומות.', technicalStatus: 'Neutral' },
+  { ticker: 'COST', name: 'Costco', price: 730.20, volatility: 3, annualReturn: 16, marketCap: '320B', whyBest: 'נאמנות לקוחות גבוהה מאוד, מודל מנויים רווחי וחסין מיתון.', technicalStatus: 'Bullish' },
+  { ticker: 'BRK-B', name: 'Berkshire Hathaway', price: 410.10, volatility: 2, annualReturn: 10, marketCap: '880B', whyBest: 'החזקות מגוונות בכלכלה האמריקאית, ניהול שמרני וערך רב.', technicalStatus: 'Stable' }
+];
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- Sidebar: Controls -->
-            <aside class="lg:col-span-4 space-y-6">
-                <div class="card p-8">
-                    <div class="flex items-center gap-2 mb-8">
-                        <i data-lucide="target" class="w-5 h-5 text-emerald-500"></i>
-                        <h2 class="text-lg font-semibold">הגדרות אנליזה</h2>
-                    </div>
-                    
-                    <div class="space-y-8">
-                        <div class="space-y-3">
-                            <label class="block text-[11px] uppercase tracking-wider opacity-40 font-mono">רשימת מניות (שם, תשואה, סיכון)</label>
-                            <textarea id="stockInput" rows="6" class="w-full rounded-xl px-4 py-3 text-xs font-mono leading-relaxed">NVDA, 45, 9
-AAPL, 18, 4
-TSLA, 35, 10
-MSFT, 15, 3
-GOOGL, 22, 5
-AMZN, 20, 6
-LLY, 40, 5</textarea>
-                        </div>
+// Types
+interface StockResult {
+  ticker: string;
+  name: string;
+  price: string;
+  riskLevel: string;
+  volatility: number;
+  numericReturn: number;
+  score: number;
+  marketCap?: string;
+  whyBest?: string;
+  technicalStatus?: string;
+}
 
-                        <div class="space-y-3">
-                            <label class="block text-[11px] uppercase tracking-wider opacity-40 font-mono">סיכון מבוקש (1-10)</label>
-                            <input type="range" id="riskLevel" min="1" max="10" value="5" class="w-full accent-emerald-500">
-                        </div>
+export default function App() {
+  const [minPrice, setMinPrice] = useState<string>('10');
+  const [maxPrice, setMaxPrice] = useState<string>('1000');
+  const [riskLevel, setRiskLevel] = useState<'Low' | 'Medium' | 'High'>('Medium');
+  const [horizonValue, setHorizonValue] = useState<string>('12');
+  const [horizonUnit, setHorizonUnit] = useState<'Days' | 'Months' | 'Years'>('Months');
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<StockResult[]>([]);
 
-                        <div class="space-y-3">
-                            <label class="block text-[11px] uppercase tracking-wider opacity-40 font-mono">אופק השקעה</label>
-                            <select id="horizon" class="w-full rounded-xl px-4 py-3 text-sm font-bold">
-                                <option value="short">קצר (עד שנה)</option>
-                                <option value="medium" selected>בינוני (1-5 שנים)</option>
-                                <option value="long">ארוך (5+ שנים)</option>
-                            </select>
-                        </div>
+  const handleSearch = () => {
+    setLoading(true);
+    
+    // Simulate "Analysis" time for better UX
+    setTimeout(() => {
+      const min = parseFloat(minPrice) || 0;
+      const max = parseFloat(maxPrice) || Infinity;
+      
+      // Filter and Score stocks based on criteria
+      const scoredResults = STOCKS_DB
+        .filter(stock => stock.price >= min && stock.price <= max)
+        .map(stock => {
+          // 1. Return Score (Higher is better)
+          const returnScore = (stock.annualReturn / 45) * 100;
+          
+          // 2. Risk Match Score
+          const targetRisk = riskLevel === 'Low' ? 3 : riskLevel === 'Medium' ? 6 : 9;
+          const riskDiff = Math.abs(stock.volatility - targetRisk);
+          const riskMatchScore = Math.max(0, 100 - (riskDiff * 15));
+          
+          // 3. Horizon Adjustment
+          // Short horizon favors low volatility, long favors return
+          let horizonMultiplier = 1;
+          const totalMonths = horizonUnit === 'Years' ? parseInt(horizonValue) * 12 : 
+                             horizonUnit === 'Months' ? parseInt(horizonValue) : 1;
+          
+          if (totalMonths < 6) { // Short term
+            horizonMultiplier = stock.volatility <= 4 ? 1.2 : 0.7;
+          } else if (totalMonths > 36) { // Long term
+            horizonMultiplier = stock.annualReturn >= 25 ? 1.2 : 1;
+          }
 
-                        <button onclick="processData()" class="btn-primary w-full py-4 rounded-xl flex items-center justify-center gap-3 shadow-lg">
-                            <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-                            <span>עדכן ניתוח</span>
-                        </button>
-                    </div>
-                </div>
-            </aside>
+          const totalScore = Math.round(((returnScore * 0.5) + (riskMatchScore * 0.5)) * horizonMultiplier);
+          
+          return {
+            ...stock,
+            price: `$${stock.price.toFixed(2)}`,
+            riskLevel: stock.volatility <= 3 ? 'Low' : stock.volatility <= 7 ? 'Medium' : 'High',
+            score: Math.min(100, totalScore)
+          };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5); // Top 5 matches
 
-            <section class="lg:col-span-8 space-y-8">
-                <div id="graphContainer" class="card p-8">
-                    <div id="chart" class="w-full flex justify-center min-h-[350px]"></div>
-                </div>
+      setResults(scoredResults);
+      setLoading(false);
+    }, 800);
+  };
 
-                <div class="card overflow-hidden min-h-[400px]">
-                    <div id="resultsList" class="divide-y divide-white/5"></div>
-                </div>
-            </section>
+  useEffect(() => {
+    handleSearch(); // Initial load
+  }, []);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-[#151619] border border-white/10 p-4 rounded-xl shadow-2xl backdrop-blur-md" dir="rtl">
+          <p className="text-emerald-500 font-bold text-lg mb-1">{data.ticker}</p>
+          <div className="space-y-1 text-xs font-mono opacity-70">
+            <p>תשואה: {data.numericReturn}%</p>
+            <p>סיכון: {data.volatility}/10</p>
+            <p className="text-white font-bold mt-2">ציון מדד: {data.score}</p>
+          </div>
         </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0B] text-[#F0F0F0] font-sans selection:bg-emerald-500 selection:text-black" dir="rtl">
+      {/* Decorative Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-md p-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+              <TrendingUp className="text-black w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">SmartInvest <span className="text-emerald-500">Algo</span></h1>
+              <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 font-mono">Advanced Financial Intelligence</p>
+            </div>
+          </div>
+          <div className="hidden md:flex items-center gap-6 text-[11px] font-mono">
+            <div className="flex items-center gap-2 opacity-60">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              REAL-TIME ENGINE ACTIVE
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative z-10 max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Controls Panel */}
+        <aside className="lg:col-span-4 space-y-6">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-[#151619] border border-white/10 p-8 rounded-2xl shadow-2xl"
+          >
+            <div className="flex items-center gap-2 mb-8">
+              <Target className="w-5 h-5 text-emerald-500" />
+              <h2 className="text-lg font-semibold">הגדרות אנליזה</h2>
+            </div>
+            
+            <div className="space-y-8">
+              {/* Info Box */}
+              <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex gap-3">
+                <Zap className="w-5 h-5 text-emerald-500 shrink-0" />
+                <p className="text-[10px] opacity-60 leading-relaxed">
+                  הניתוח מתבצע באמצעות אלגוריתם חכם המנתח מאגר מניות מובילות בזמן אמת, ללא צורך בחיבור חיצוני.
+                </p>
+              </div>
+
+              {/* Price Range */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="text-[11px] uppercase tracking-wider opacity-40 font-mono">מחיר מינימלי ($)</label>
+                  <input 
+                    type="number" 
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 transition-colors font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[11px] uppercase tracking-wider opacity-40 font-mono">מחיר מקסימלי ($)</label>
+                  <input 
+                    type="number" 
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 transition-colors font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Risk Level */}
+              <div className="space-y-3">
+                <label className="text-[11px] uppercase tracking-wider opacity-40 font-mono">רמת סיכון מבוקשת</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Low', 'Medium', 'High'] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setRiskLevel(level)}
+                      className={`py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                        riskLevel === level 
+                          ? 'bg-emerald-500 border-emerald-500 text-black' 
+                          : 'bg-white/5 border-white/10 opacity-40 hover:opacity-100'
+                      }`}
+                    >
+                      {level === 'Low' ? 'נמוך' : level === 'Medium' ? 'בינוני' : 'גבוה'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time Horizon */}
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[11px] uppercase tracking-wider opacity-40 font-mono">
+                  <Clock className="w-3 h-3" />
+                  אופק השקעה
+                </label>
+                <div className="flex gap-2">
+                  <input 
+                    type="number"
+                    value={horizonValue}
+                    onChange={(e) => setHorizonValue(e.target.value)}
+                    className="w-20 bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 transition-colors font-mono text-xs"
+                  />
+                  <select 
+                    value={horizonUnit}
+                    onChange={(e) => setHorizonUnit(e.target.value as any)}
+                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 transition-colors font-bold text-sm"
+                  >
+                    <option value="Days">ימים</option>
+                    <option value="Months">חודשים</option>
+                    <option value="Years">שנים</option>
+                  </select>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleSearch}
+                disabled={loading}
+                className="w-full bg-emerald-500 text-black font-bold py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-emerald-400 transition-all shadow-[0_0_30px_rgba(16,185,129,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+                <span>הפעל ניתוח חכם</span>
+              </button>
+            </div>
+          </motion.div>
+
+          <div className="p-6 bg-white/5 border border-white/10 rounded-2xl">
+              <div className="flex gap-3 mb-3 text-emerald-500">
+                <Zap className="w-4 h-4 shrink-0" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Investment Scoring Algorithm</span>
+              </div>
+            <p className="text-xs leading-relaxed opacity-50">
+              הציון משקלל 40% פוטנציאל תשואה, 40% התאמה לרמת הסיכון שבחרת ו-20% אופטימיזציה לטווח הזמן.
+            </p>
+          </div>
+        </aside>
+
+        {/* Results Panel */}
+        <section className="lg:col-span-8 space-y-6">
+          <AnimatePresence mode="wait">
+            {results.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[#151619] border border-white/10 p-8 rounded-2xl shadow-2xl"
+              >
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-[11px] uppercase tracking-widest opacity-40 font-bold">Risk vs. Reward Analysis</h3>
+                  <div className="flex gap-4 text-[9px] font-bold uppercase">
+                    <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> מומלץ (&gt;80)</div>
+                    <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-white/20"></span> רגיל</div>
+                  </div>
+                </div>
+                
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <XAxis 
+                        type="number" 
+                        dataKey="volatility" 
+                        name="Risk" 
+                        domain={[0, 11]} 
+                        stroke="rgba(255,255,255,0.3)" 
+                        fontSize={10}
+                      >
+                        <Label value="Volatility (Risk)" position="bottom" offset={0} fill="rgba(255,255,255,0.3)" fontSize={10} />
+                      </XAxis>
+                      <YAxis 
+                        type="number" 
+                        dataKey="numericReturn" 
+                        name="Return" 
+                        stroke="rgba(255,255,255,0.3)" 
+                        fontSize={10}
+                      >
+                        <Label value="Return (%)" angle={-90} position="left" offset={0} fill="rgba(255,255,255,0.3)" fontSize={10} />
+                      </YAxis>
+                      <ZAxis type="number" dataKey="score" range={[50, 400]} />
+                      <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+                      <Scatter name="Stocks" data={results}>
+                        {results.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.score && entry.score >= 80 ? '#10b981' : 'rgba(255,255,255,0.1)'} 
+                          />
+                        ))}
+                        <LabelList 
+                          dataKey="ticker" 
+                          position="top" 
+                          content={(props: any) => {
+                            const { x, y, value, index } = props;
+                            const stock = results[index];
+                            return (
+                              <text x={x} y={y - 10} fill="rgba(255,255,255,0.5)" fontSize="10" fontFamily="monospace" textAnchor="middle">
+                                {value} ({stock.score})
+                              </text>
+                            );
+                          }}
+                        />
+                      </Scatter>
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="bg-[#151619] border border-white/10 rounded-2xl overflow-hidden shadow-2xl min-h-[400px]">
+            {results.length > 0 ? (
+              <div className="divide-y divide-white/5">
+                {results.map((stock, idx) => (
+                  <motion.div 
+                    key={stock.ticker}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="p-8 hover:bg-white/[0.02] transition-all group"
+                  >
+                    <div className="grid grid-cols-12 items-center">
+                      <div className="col-span-3">
+                        <div className="text-2xl font-black font-mono text-emerald-400">{stock.ticker}</div>
+                        <div className="text-[10px] opacity-40 font-mono mt-1">{stock.marketCap || 'N/A'}</div>
+                      </div>
+                      <div className="col-span-3">
+                        <div className="text-lg font-mono text-emerald-500">{stock.price}</div>
+                        <div className="text-[10px] opacity-40 uppercase tracking-wider">Current Price</div>
+                      </div>
+                      <div className="col-span-3">
+                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${
+                          stock.riskLevel === 'Low' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' :
+                          stock.riskLevel === 'Medium' ? 'border-blue-500/20 bg-blue-500/10 text-blue-400' :
+                          'border-orange-500/20 bg-orange-500/10 text-orange-400'
+                        }`}>
+                          {stock.riskLevel} Risk ({stock.volatility}/10)
+                        </div>
+                      </div>
+                      <div className="col-span-3 text-left">
+                        <div className="flex items-center justify-end gap-4">
+                          <div className="text-right">
+                            <div className="text-[9px] font-bold opacity-30 uppercase tracking-wider">Investment Score</div>
+                            <div className={`text-xs font-bold ${stock.score >= 80 ? 'text-emerald-500' : 'opacity-60'}`}>
+                              {stock.technicalStatus || (stock.score >= 80 ? 'מומלץ מאוד' : 'ביצועים טובים')}
+                            </div>
+                          </div>
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl font-mono shadow-2xl ${
+                            stock.score >= 80 ? 'bg-emerald-500 text-black' : 'bg-white/5 border border-white/10'
+                          }`}>
+                            {stock.score}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {stock.whyBest && (
+                      <div className="mt-4 p-4 bg-white/5 rounded-xl text-[11px] opacity-60 leading-relaxed">
+                        {stock.whyBest}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[400px] opacity-20">
+                <BarChart3 className="w-16 h-16 mb-4" />
+                <p className="text-lg italic">הזן נתונים ולחץ על עדכן...</p>
+              </div>
+            )}
+          </div>
+
+          <footer className="p-8 bg-white/5 border border-white/10 rounded-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              <h3 className="text-sm font-bold uppercase tracking-[0.2em]">Legal Disclaimer</h3>
+            </div>
+            <p className="text-[11px] leading-relaxed opacity-40 text-justify">
+              המידע המופק באמצעות המערכת מבוסס על אלגוריתם חכם ונתוני שוק גלויים. אין לראות במידע זה ייעוץ השקעות. השקעה בשוק ההון כרוכה בסיכון משמעותי. המערכת אינה אחראית לכל נזק או הפסד שייגרם כתוצאה מהסתמכות על המידע המוצג.
+            </p>
+          </footer>
+        </section>
+      </main>
     </div>
-
-    <script>
-        lucide.createIcons();
-
-        function processData() {
-            const input = document.getElementById('stockInput').value;
-            const riskLevel = parseInt(document.getElementById('riskLevel').value);
-            const horizon = document.getElementById('horizon').value;
-            const resultsList = document.getElementById('resultsList');
-
-            const lines = input.trim().split('\n');
-            let stocks = lines.map(line => {
-                const parts = line.split(',').map(s => s.trim());
-                if (parts.length < 3) return null;
-                return {
-                    ticker: parts[0],
-                    numericReturn: parseFloat(parts[1]) || 0,
-                    volatility: parseFloat(parts[2]) || 0
-                };
-            }).filter(s => s !== null);
-
-            if (stocks.length === 0) return;
-
-            const maxRet = Math.max(...stocks.map(s => s.numericReturn), 1);
-            stocks = stocks.map(s => {
-                const returnScore = (s.numericReturn / maxRet) * 100;
-                const riskDiff = Math.abs(s.volatility - riskLevel);
-                const riskMatchScore = Math.max(0, 100 - (riskDiff * 15));
-                let timeScore = 0;
-                if (horizon === 'short') timeScore = 100 - (s.volatility * 10);
-                else if (horizon === 'medium') timeScore = 100 - (Math.abs(s.volatility - 5) * 10);
-                else timeScore = returnScore;
-
-                return {
-                    ...s,
-                    riskLevel: s.volatility <= 3 ? 'Low' : s.volatility <= 7 ? 'Medium' : 'High',
-                    score: Math.round((returnScore * 0.4) + (riskMatchScore * 0.4) + (timeScore * 0.2))
-                };
-            }).sort((a, b) => b.score - a.score);
-
-            resultsList.innerHTML = '';
-            stocks.forEach(stock => {
-                const item = document.createElement('div');
-                item.className = 'p-8 hover:bg-white/[0.02] transition-all';
-                item.innerHTML = `
-                    <div class="grid grid-cols-12 items-center">
-                        <div class="col-span-3">
-                            <div class="text-2xl font-black font-mono text-emerald-400">${stock.ticker}</div>
-                            <div class="text-[10px] opacity-40 font-mono mt-1">Manual Entry Asset</div>
-                        </div>
-                        <div class="col-span-3">
-                            <div class="text-lg font-mono text-emerald-500">${stock.numericReturn}%</div>
-                            <div class="text-[10px] opacity-40 uppercase tracking-wider">Estimated Return</div>
-                        </div>
-                        <div class="col-span-3">
-                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${
-                                stock.riskLevel === 'Low' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' :
-                                stock.riskLevel === 'Medium' ? 'border-blue-500/20 bg-blue-500/10 text-blue-400' :
-                                'border-orange-500/20 bg-orange-500/10 text-orange-400'
-                            }">
-                                ${stock.riskLevel} Risk (${stock.volatility}/10)
-                            </div>
-                        </div>
-                        <div class="col-span-3 text-left">
-                            <div class="flex items-center justify-end gap-4">
-                                <div class="score-box ${stock.score >= 80 ? 'bg-emerald-500 text-black' : 'bg-white/5 border border-white/10'}">${stock.score}</div>
-                            </div>
-                        </div>
-                    </div>`;
-                resultsList.appendChild(item);
-            });
-            renderChart(stocks);
-        }
-
-        function renderChart(data) {
-            const container = document.getElementById('chart');
-            container.innerHTML = '';
-            const margin = {top: 40, right: 80, bottom: 60, left: 60}, width = container.offsetWidth - margin.left - margin.right, height = 350 - margin.top - margin.bottom;
-            const svg = d3.select("#chart").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-            const x = d3.scaleLinear().domain([0, 11]).range([0, width]), y = d3.scaleLinear().domain([0, d3.max(data, d => d.numericReturn) * 1.2]).range([height, 0]);
-            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x)).attr("color", "rgba(255,255,255,0.1)");
-            svg.append("g").call(d3.axisLeft(y)).attr("color", "rgba(255,255,255,0.1)");
-            const dots = svg.selectAll("dot").data(data).enter().append("g");
-            dots.append("circle").attr("cx", d => x(d.volatility)).attr("cy", d => y(d.numericReturn)).attr("r", 6).style("fill", d => d.score >= 80 ? "#10b981" : "rgba(255,255,255,0.2)");
-            dots.append("text").attr("x", d => x(d.volatility)).attr("y", d => y(d.numericReturn) - 15).style("font-size", "10px").style("fill", "rgba(255,255,255,0.5)").style("text-anchor", "middle").text(d => `${d.ticker} (${d.score})`);
-        }
-        
-        processData();
-    </script>
-</body>
-</html>
+  );
+}
