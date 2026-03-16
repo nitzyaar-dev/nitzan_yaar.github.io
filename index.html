@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartInvest AI - ניתוח השקעות</title>
+    <title>SmartInvest AI - עוזר השקעות</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Chart.js -->
+    <!-- Chart.js (More stable for standalone HTML) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -26,6 +26,7 @@
             background-color: #0D0D0E;
             color: #F0F0F0;
             margin: 0;
+            overflow-x: hidden;
         }
         .glass {
             background: rgba(22, 22, 26, 0.8);
@@ -60,8 +61,7 @@
             { ticker: 'AMZN', name: 'Amazon', price: 178, volatility: 6, return: 20, sector: 'קמעונאות' },
             { ticker: 'GOOGL', name: 'Google', price: 151, volatility: 5, return: 22, sector: 'טכנולוגיה' },
             { ticker: 'BRK.B', name: 'Berkshire', price: 408, volatility: 2, return: 12, sector: 'פיננסים' },
-            { ticker: 'LLY', name: 'Eli Lilly', price: 750, volatility: 5, return: 40, sector: 'בריאות' },
-            { ticker: 'V', name: 'Visa', price: 280, volatility: 3, return: 14, sector: 'פיננסים' }
+            { ticker: 'LLY', name: 'Eli Lilly', price: 750, volatility: 5, return: 40, sector: 'בריאות' }
         ];
 
         function App() {
@@ -100,7 +100,7 @@
                     return;
                 }
                 const top = data[0];
-                const horizonText = horizon === 'Short' ? 'טווח קצר (עד שנה)' : horizon === 'Medium' ? 'טווח בינוני (1-5 שנים)' : 'טווח ארוך (5+ שנים)';
+                const horizonText = horizon === 'Short' ? 'טווח קצר' : horizon === 'Medium' ? 'טווח בינוני' : 'טווח ארוך';
                 const riskText = risk === 'Low' ? 'סולידית' : risk === 'Medium' ? 'מאוזנת' : 'אגרסיבית';
                 
                 setAiInsight(`ניתוח חכם: עבור אסטרטגיה ${riskText} ל${horizonText}, המניה המומלצת ביותר היא ${top.ticker}. היא מציגה שילוב אופטימלי של תשואה (${top.return}%) ורמת תנודתיות שמתאימה לפרופיל שלך.`);
@@ -179,10 +179,10 @@
 
                                 <div className="space-y-4">
                                     <label className="text-[10px] uppercase opacity-40 font-bold tracking-widest">אופק השקעה</label>
-                                    <select value={horizon} onChange={e => setHorizon(e.target.value)} className="w-full p-3 rounded-xl text-sm appearance-none cursor-pointer">
-                                        <option value="Short">טווח קצר (עד שנה)</option>
-                                        <option value="Medium">טווח בינוני (1-5 שנים)</option>
-                                        <option value="Long">טווח ארוך (5+ שנים)</option>
+                                    <select value={horizon} onChange={e => setHorizon(e.target.value)} className="w-full p-3 rounded-xl text-sm appearance-none">
+                                        <option value="Short">טווח קצר</option>
+                                        <option value="Medium">טווח בינוני</option>
+                                        <option value="Long">טווח ארוך</option>
                                     </select>
                                 </div>
 
@@ -202,7 +202,7 @@
                                 <p className="text-sm leading-relaxed opacity-80">{aiInsight}</p>
                             </div>
 
-                            {/* Chart Area */}
+                            {/* Chart (The Index) */}
                             <div className="glass p-6 rounded-[2rem] h-[300px]">
                                 <canvas ref={chartRef}></canvas>
                             </div>
