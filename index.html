@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartInvest AI</title>
+    <title>SmartInvest AI - ניתוח השקעות</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,50 +16,52 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0A0A0B;
+            background-color: #0D0D0E;
             color: #F0F0F0;
             margin: 0;
         }
         .glass {
-            background: rgba(25, 25, 28, 0.8);
-            backdrop-filter: blur(10px);
+            background: rgba(22, 22, 26, 0.8);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .btn-primary {
-            background-color: #10b981;
-            color: #000;
-            font-weight: 800;
-            transition: all 0.2s;
+        .emerald-glow {
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.1);
         }
-        .btn-primary:hover {
-            background-color: #34d399;
-            transform: translateY(-2px);
+        select, input {
+            background: rgba(0,0,0,0.3) !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+        }
+        select:focus, input:focus {
+            border-color: #10b981 !important;
+            outline: none;
         }
     </style>
 </head>
 <body>
-    <!-- הודעת טעינה למקרה שה-JS נכשל -->
-    <div id="root">
-        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #10b981; font-family: sans-serif;">
-            טוען מערכת השקעות...
-        </div>
-    </div>
+    <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // נתונים בסיסיים
-        const STOCKS = [
-            { ticker: 'NVDA', name: 'NVIDIA', price: 875, return: 45, risk: 'High' },
-            { ticker: 'AAPL', name: 'Apple', price: 172, return: 15, risk: 'Low' },
-            { ticker: 'MSFT', name: 'Microsoft', price: 415, return: 18, risk: 'Low' },
-            { ticker: 'TSLA', name: 'Tesla', price: 163, return: 35, risk: 'High' },
-            { ticker: 'AMZN', name: 'Amazon', price: 178, return: 20, risk: 'Medium' },
-            { ticker: 'GOOGL', name: 'Google', price: 151, return: 22, risk: 'Medium' }
+        const STOCKS_DB = [
+            { ticker: 'NVDA', name: 'NVIDIA', price: 875, volatility: 9, return: 45, sector: 'טכנולוגיה' },
+            { ticker: 'AAPL', name: 'Apple', price: 172, volatility: 4, return: 15, sector: 'טכנולוגיה' },
+            { ticker: 'TSLA', name: 'Tesla', price: 163, volatility: 10, return: 35, sector: 'רכב' },
+            { ticker: 'MSFT', name: 'Microsoft', price: 415, volatility: 3, return: 18, sector: 'טכנולוגיה' },
+            { ticker: 'AMZN', name: 'Amazon', price: 178, volatility: 6, return: 20, sector: 'קמעונאות' },
+            { ticker: 'GOOGL', name: 'Google', price: 151, volatility: 5, return: 22, sector: 'טכנולוגיה' },
+            { ticker: 'BRK.B', name: 'Berkshire', price: 408, volatility: 2, return: 12, sector: 'פיננסים' },
+            { ticker: 'LLY', name: 'Eli Lilly', price: 750, volatility: 5, return: 40, sector: 'בריאות' },
+            { ticker: 'V', name: 'Visa', price: 280, volatility: 3, return: 14, sector: 'פיננסים' }
         ];
 
         function App() {
@@ -67,116 +69,179 @@
             const [maxPrice, setMaxPrice] = useState(1000);
             const [risk, setRisk] = useState('Medium');
             const [horizon, setHorizon] = useState('Medium');
-            const [filtered, setFiltered] = useState(STOCKS);
+            const [results, setResults] = useState([]);
+            const [aiInsight, setAiInsight] = useState('');
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
 
-            // פונקציית סינון
-            const filterData = () => {
-                const results = STOCKS.filter(s => {
-                    const priceMatch = s.price >= minPrice && s.price <= maxPrice;
-                    const riskMatch = risk === 'All' || s.risk === risk;
-                    return priceMatch && riskMatch;
-                });
-                setFiltered(results);
+            const analyze = () => {
+                const filtered = STOCKS_DB.filter(s => s.price >= minPrice && s.price <= maxPrice);
+                
+                const scored = filtered.map(s => {
+                    const targetRisk = risk === 'Low' ? 3 : risk === 'Medium' ? 6 : 9;
+                    const riskMatch = 100 - (Math.abs(s.volatility - targetRisk) * 10);
+                    
+                    let horizonBonus = 0;
+                    if (horizon === 'Long' && s.volatility < 5) horizonBonus = 15;
+                    if (horizon === 'Short' && s.return > 30) horizonBonus = 15;
+                    
+                    const score = Math.round((riskMatch * 0.7) + (s.return * 0.2) + horizonBonus);
+                    return { ...s, score: Math.min(100, Math.max(0, score)) };
+                }).sort((a, b) => b.score - a.score).slice(0, 5);
+
+                setResults(scored);
+                generateAIInsight(scored);
+                updateChart(scored);
             };
 
-            // הפעלת אייקונים אחרי שהדף נטען
-            useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
+            const generateAIInsight = (data) => {
+                if (data.length === 0) {
+                    setAiInsight("לא נמצאו מניות תואמות לפרמטרים שבחרת.");
+                    return;
                 }
-                filterData();
-            }, [minPrice, maxPrice, risk]);
+                const top = data[0];
+                const horizonText = horizon === 'Short' ? 'טווח קצר (עד שנה)' : horizon === 'Medium' ? 'טווח בינוני (1-5 שנים)' : 'טווח ארוך (5+ שנים)';
+                const riskText = risk === 'Low' ? 'סולידית' : risk === 'Medium' ? 'מאוזנת' : 'אגרסיבית';
+                
+                setAiInsight(`ניתוח חכם: עבור אסטרטגיה ${riskText} ל${horizonText}, המניה המומלצת ביותר היא ${top.ticker}. היא מציגה שילוב אופטימלי של תשואה (${top.return}%) ורמת תנודתיות שמתאימה לפרופיל שלך.`);
+            };
+
+            const updateChart = (data) => {
+                if (!chartRef.current) return;
+                if (chartInstance.current) chartInstance.current.destroy();
+
+                const ctx = chartRef.current.getContext('2d');
+                chartInstance.current = new Chart(ctx, {
+                    type: 'bubble',
+                    data: {
+                        datasets: [{
+                            label: 'מניות מומלצות',
+                            data: data.map(s => ({ x: s.volatility, y: s.return, r: s.score / 5 })),
+                            backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                            borderColor: '#10b981',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { title: { display: true, text: 'רמת סיכון', color: '#666' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            y: { title: { display: true, text: 'תשואה %', color: '#666' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            };
+
+            useEffect(() => {
+                analyze();
+                if (window.lucide) window.lucide.createIcons();
+            }, []);
 
             return (
-                <div className="min-h-screen p-6 max-w-5xl mx-auto">
+                <div className="min-h-screen p-4 md:p-8 max-w-6xl mx-auto">
                     {/* Header */}
-                    <header className="flex items-center gap-4 mb-10">
-                        <div className="bg-emerald-500 p-3 rounded-xl">
-                            <i data-lucide="trending-up" className="text-black"></i>
+                    <header className="flex items-center gap-4 mb-12">
+                        <div className="bg-emerald-500 p-3 rounded-2xl emerald-glow">
+                            <i data-lucide="bar-chart-3" className="text-black w-8 h-8"></i>
                         </div>
-                        <h1 className="text-3xl font-black tracking-tight">SmartInvest <span className="text-emerald-500">AI</span></h1>
+                        <div>
+                            <h1 className="text-3xl font-black tracking-tight">SmartInvest <span className="text-emerald-500">AI</span></h1>
+                            <p className="text-[10px] opacity-30 uppercase tracking-widest">Investment Intelligence Engine</p>
+                        </div>
                     </header>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                         {/* Sidebar */}
-                        <div className="glass p-6 rounded-3xl h-fit space-y-6">
-                            <h2 className="font-bold flex items-center gap-2">
-                                <i data-lucide="filter" className="w-4 h-4 text-emerald-500"></i> פילטרים
-                            </h2>
-                            
-                            <div className="space-y-2">
-                                <label className="text-xs opacity-50 uppercase">טווח מחיר ($)</label>
-                                <div className="flex gap-2">
-                                    <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="w-full bg-black/50 border border-white/10 p-2 rounded-lg text-sm" placeholder="מ-" />
-                                    <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="w-full bg-black/50 border border-white/10 p-2 rounded-lg text-sm" placeholder="עד" />
-                                </div>
-                            </div>
+                        <aside className="lg:col-span-4 space-y-6">
+                            <div className="glass p-8 rounded-[2rem] space-y-8">
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    <i data-lucide="sliders-horizontal" className="text-emerald-500 w-5 h-5"></i> הגדרות
+                                </h2>
 
-                            <div className="space-y-2">
-                                <label className="text-xs opacity-50 uppercase">רמת סיכון</label>
-                                <select value={risk} onChange={e => setRisk(e.target.value)} className="w-full bg-black/50 border border-white/10 p-2 rounded-lg text-sm">
-                                    <option value="Low">נמוך (סולידי)</option>
-                                    <option value="Medium">בינוני (מאוזן)</option>
-                                    <option value="High">גבוה (אגרסיבי)</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs opacity-50 uppercase">אופק השקעה</label>
-                                <select value={horizon} onChange={e => setHorizon(e.target.value)} className="w-full bg-black/50 border border-white/10 p-2 rounded-lg text-sm">
-                                    <option value="Short">טווח קצר</option>
-                                    <option value="Medium">טווח בינוני</option>
-                                    <option value="Long">טווח ארוך</option>
-                                </select>
-                            </div>
-
-                            <button onClick={filterData} className="btn-primary w-full py-3 rounded-xl">
-                                עדכן תוצאות
-                            </button>
-                        </div>
-
-                        {/* Main List */}
-                        <div className="lg:col-span-2 space-y-4">
-                            <div className="flex justify-between items-center mb-2 px-2">
-                                <span className="text-xs opacity-40 uppercase font-bold">מניות מומלצות ({filtered.length})</span>
-                                <i data-lucide="layout-grid" className="w-4 h-4 opacity-20"></i>
-                            </div>
-
-                            {filtered.length > 0 ? filtered.map(stock => (
-                                <div key={stock.ticker} className="glass p-5 rounded-2xl flex justify-between items-center hover:bg-white/5 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center text-emerald-500 font-bold">
-                                            {stock.ticker[0]}
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-lg">{stock.ticker}</div>
-                                            <div className="text-[10px] opacity-40 uppercase">{stock.name}</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="font-bold">${stock.price}</div>
-                                        <div className="text-[10px] text-emerald-500">+{stock.return}% תשואה</div>
-                                    </div>
-                                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold ${stock.risk === 'High' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                        {stock.risk}
+                                <div className="space-y-4">
+                                    <label className="text-[10px] uppercase opacity-40 font-bold tracking-widest">טווח מחיר ($)</label>
+                                    <div className="flex gap-3">
+                                        <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="w-full p-3 rounded-xl text-sm" placeholder="מינימום" />
+                                        <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="w-full p-3 rounded-xl text-sm" placeholder="מקסימום" />
                                     </div>
                                 </div>
-                            )) : (
-                                <div className="text-center py-20 opacity-30">לא נמצאו מניות תואמות</div>
-                            )}
+
+                                <div className="space-y-4">
+                                    <label className="text-[10px] uppercase opacity-40 font-bold tracking-widest">רמת סיכון</label>
+                                    <select value={risk} onChange={e => setRisk(e.target.value)} className="w-full p-3 rounded-xl text-sm appearance-none">
+                                        <option value="Low">נמוך (סולידי)</option>
+                                        <option value="Medium">בינוני (מאוזן)</option>
+                                        <option value="High">גבוה (אגרסיבי)</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="text-[10px] uppercase opacity-40 font-bold tracking-widest">אופק השקעה</label>
+                                    <select value={horizon} onChange={e => setHorizon(e.target.value)} className="w-full p-3 rounded-xl text-sm appearance-none cursor-pointer">
+                                        <option value="Short">טווח קצר (עד שנה)</option>
+                                        <option value="Medium">טווח בינוני (1-5 שנים)</option>
+                                        <option value="Long">טווח ארוך (5+ שנים)</option>
+                                    </select>
+                                </div>
+
+                                <button onClick={analyze} className="w-full bg-emerald-500 text-black font-black py-4 rounded-2xl hover:bg-emerald-400 transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="zap" className="w-4 h-4"></i> עדכן ניתוח
+                                </button>
+                            </div>
+                        </aside>
+
+                        {/* Main Content */}
+                        <div className="lg:col-span-8 space-y-6">
+                            {/* AI Insight */}
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-3xl">
+                                <div className="flex items-center gap-2 mb-2 text-emerald-500 font-bold text-xs uppercase tracking-widest">
+                                    <i data-lucide="brain" className="w-4 h-4"></i> תובנת AI
+                                </div>
+                                <p className="text-sm leading-relaxed opacity-80">{aiInsight}</p>
+                            </div>
+
+                            {/* Chart Area */}
+                            <div className="glass p-6 rounded-[2rem] h-[300px]">
+                                <canvas ref={chartRef}></canvas>
+                            </div>
+
+                            {/* Results List */}
+                            <div className="space-y-3">
+                                {results.map(stock => (
+                                    <div key={stock.ticker} className="glass p-5 rounded-2xl flex justify-between items-center hover:bg-white/5 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500 font-black">
+                                                {stock.ticker[0]}
+                                            </div>
+                                            <div>
+                                                <div className="font-black text-lg">{stock.ticker}</div>
+                                                <div className="text-[10px] opacity-30 uppercase">{stock.sector}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-bold">${stock.price}</div>
+                                            <div className="text-[10px] text-emerald-500 font-bold">+{stock.return}% תשואה</div>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[8px] opacity-30 uppercase font-bold">Score</div>
+                                            <div className="text-xl font-black text-emerald-500">{stock.score}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
             );
         }
 
-        // Render with error catching
-        try {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
-        } catch (err) {
-            document.getElementById('root').innerHTML = `<div style="color: red; padding: 20px;">שגיאה בטעינת האפליקציה: ${err.message}</div>`;
-        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        
+        // Initialize icons
+        setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 500);
     </script>
 </body>
 </html>
